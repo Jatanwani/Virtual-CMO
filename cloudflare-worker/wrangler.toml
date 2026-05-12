@@ -1,0 +1,43 @@
+name = "virtual-cmo-gateway"
+main = "worker.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── Account (filled automatically by `wrangler login`) ───────────────────────
+# account_id = "your_account_id_here"
+
+# ─── KV Namespace for caching ─────────────────────────────────────────────────
+# After running `wrangler kv namespace create CMO_CACHE`, paste the id below
+[[kv_namespaces]]
+binding = "CMO_CACHE"
+id = "18c8e3c51f8649d2a411e4e6d267eba7"
+# preview_id = "18c8e3c51f8649d2a411e4e6d267eba7"  # optional for local dev
+
+# ─── Environment Variables (set via `wrangler secret put` — never hardcode!) ──
+# These are placeholders. The actual values live in Cloudflare dashboard secrets.
+[vars]
+ALLOWED_ORIGIN = "*"
+# Set real secrets via terminal:
+#   wrangler secret put GROQ_API_KEY
+#   wrangler secret put CEREBRAS_API_KEY
+#   wrangler secret put GEMINI_API_KEY
+#   wrangler secret put MISTRAL_API_KEY
+#   wrangler secret put OLLAMA_URL
+
+# ─── Build (TypeScript) ───────────────────────────────────────────────────────
+[build]
+command = "npm run build:worker"
+
+# ─── Triggers (runs on every request to your worker subdomain) ────────────────
+[triggers]
+crons = []
+
+# ─── Worker Limits (free tier) ────────────────────────────────────────────────
+# Free tier: 100,000 requests/day, 10ms CPU per request (plenty for routing)
+# Our worker mostly does fetch() calls which don't count against CPU time
+
+# ─── Production environment overrides ─────────────────────────────────────────
+[env.production]
+name = "virtual-cmo-gateway"
+[env.production.vars]
+ALLOWED_ORIGIN = "https://your-app.vercel.app"  # restrict to your app in prod
