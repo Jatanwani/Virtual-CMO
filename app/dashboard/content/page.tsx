@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-
+export const dynamic = 'force-dynamic';
 // Define the structure of a post
 interface Post {
   image_url: string;
