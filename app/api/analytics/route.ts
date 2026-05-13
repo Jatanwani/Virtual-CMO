@@ -6,56 +6,41 @@ export async function GET() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-    return NextResponse.json({ profile })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
-  }
-}
 
-export async function PATCH(request: Request) {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const [postsRes, analyticsRes, contentRes, profileRes] = await Promise.all([
+      supabase.from('scheduled_posts').select('*').eq('user_id', user.id),
+      supabase.from('post_analytics').select('*').eq('user_id', user.id),
+      supabase.from('content_items').select('*').eq('user_id', user.id),
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+    ])
 
-    const body = await request.json()
+    const posts = (postsRes.data || []) as any[]
+    const analytics = (analyticsRes.data || []) as any[]
+    const content = (contentRes.data || []) as any[]
+    const profile = profileRes.data
 
-    // Whitelist all allowed fields
-    const allowed = [
-      'full_name', 'avatar_url',
-      'company_name', 'company_logo_url', 'website', 'team_size',
-      'founder_phone', 'founder_email',
-      'linkedin_url', 'twitter_url', 'instagram_url', 'facebook_url',
-      'linkedin_connected', 'twitter_connected', 'instagram_connected', 'facebook_connected',
-      'linkedin_handle', 'twitter_handle', 'instagram_handle', 'facebook_handle',
-      'product', 'problem', 'icp', 'stage', 'traction', 'channels',
-      'goal_30', 'time_available', 'budget', 'archetype',
-    ]
+    const totalPosts = posts.length
+    const publishedPosts = posts.filter(p => p.status === 'posted').length
+    const pendingPosts = posts.filter(p => p.status === 'pending').length
+    const failedPosts = posts.filter(p => p.status === 'failed').length
+    const totalContent = content.length
+    const draftContent = content.filter(c => c.status === 'draft').length
+    const totalImpressions = analytics.reduce((sum: number, a: any) => sum + (a.impressions || 0), 0)
+    const totalLikes = analytics.reduce((sum: number, a: any) => sum + (a.likes || 0), 0)
+    const totalEngagements = totalLikes + analytics.reduce((sum: number, a: any) => sum + (a.comments || 0) + (a.shares || 0), 0)
 
-    const updates: Record<string, any> = {}
-    allowed.forEach(key => {
-      if (body[key] !== undefined) {
-        // Convert string booleans
-        if (key.endsWith('_connected')) {
-          updates[key] = body[key] === 'true' || body[key] === true
-        } else {
-          updates[key] = body[key]
-        }
-      }
+    const platformStats = ['linkedin', 'twitter', 'instagram', 'facebook'].map(platform => ({
+      platform,
+      posts: posts.filter(p => p.platform === platform).length,
+      published: posts.filter(p => p.platform === platform && p.status === 'posted').length,
+    }))
+
+    return NextResponse.json({
+      overview: { totalPosts, publishedPosts, pendingPosts, failedPosts, totalContent, draftContent, totalImpressions, totalEngagements },
+      platformStats,
+      recentPosts: posts.slice(0, 5),
+      profile,
     })
-
-    updates.updated_at = new Date().toISOString()
-
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .update(updates as any)
-      .eq('id', user.id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return NextResponse.json({ profile })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

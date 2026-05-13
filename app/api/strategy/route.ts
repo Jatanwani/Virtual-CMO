@@ -2,18 +2,19 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { callGatewayJSON, buildFounderContext } from '@/lib/ai-gateway'
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    const p = (profile || {}) as any
 
     const prompt = `You are a world-class CMO. Analyze this founder and generate a complete marketing strategy.
 
 FOUNDER CONTEXT:
-${buildFounderContext(profile || {})}
+${buildFounderContext(p)}
 
 Return ONLY this JSON structure:
 {
@@ -35,7 +36,7 @@ Return ONLY this JSON structure:
   "landing_page_reason": "Specific reason why they need a landing page right now"
 }`
 
-    const strategy = await callGatewayJSON<any>(prompt, profile || {}, user.id)
+    const strategy = await callGatewayJSON<any>(prompt, p, user.id)
     return NextResponse.json({ strategy })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

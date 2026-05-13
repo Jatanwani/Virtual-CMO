@@ -10,11 +10,12 @@ export async function POST(request: Request) {
 
     const { content_item_id, topic, pillar, platform = 'LinkedIn' } = await request.json()
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    const p = (profile || {}) as any
 
     const prompt = `Regenerate a completely fresh, better version of this social media post.
 
 FOUNDER CONTEXT:
-${buildFounderContext(profile || {})}
+${buildFounderContext(p)}
 
 Topic: ${topic}
 Pillar: ${pillar}
@@ -29,17 +30,18 @@ Return ONLY this JSON:
   "image_prompt": "Detailed AI image prompt - professional marketing visual, no text in image"
 }`
 
-    const revised = await callGatewayJSON<any>(prompt, profile || {}, user.id)
+    const revised = await callGatewayJSON<any>(prompt, p, user.id)
 
     if (content_item_id) {
-      await supabase.from('content_items').update({
+      const updateData = {
         hook: revised.hook,
         full_post: revised.body,
         cta: revised.cta,
         hashtags: revised.hashtags,
         image_prompt: revised.image_prompt,
-        image_url: null,
-      }).eq('id', content_item_id).eq('user_id', user.id)
+        image_url: null as null,
+      }
+      await supabase.from('content_items').update(updateData as never).eq('id', content_item_id).eq('user_id', user.id)
     }
 
     return NextResponse.json({ revised })
