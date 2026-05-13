@@ -1,29 +1,34 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
-export async function PATCH(request: Request) {
+export async function POST(request: Request) {
+  const supabase = createRouteHandlerClient({ cookies });
+  
   try {
-    const supabase = await createClient() // Add await here!
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const body = await request.json();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    const body = await request.json()
-
-    const allowed = ['product', 'problem', 'icp', 'stage', 'traction', 'channels', 'goal_30', 'time_available', 'budget', 'full_name']
-    const update: Record<string, string> = {}
-    for (const key of allowed) {
-      if (body[key] !== undefined) update[key] = body[key]
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data } = await supabase
+    // We use .upsert to either create a new profile or update an existing one
+    const { error } = await supabase
       .from('profiles')
-      .update(update)
-      .eq('id', user.id)
-      .select()
-      .single()
+      .upsert({
+        id: user.id,
+        company_name: body.company_name,
+        website: body.website,
+        industry: body.industry, // General purpose field
+        solving_problem: body.solving_problem,
+        updated_at: new Date().toISOString(),
+      });
 
-    return NextResponse.json({ profile: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    if (error) throw error;
+
+    return NextResponse.json({ message: 'Profile updated successfully' });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
