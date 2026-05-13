@@ -3,17 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient() // Add 'await' here
+    const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { content } = await request.json()
-
-    await supabase.from('chat_messages').insert({
-      user_id: user.id,
-      role: 'assistant',
-      content,
-    })
+    const { content_item_id } = await request.json()
+    await supabase.from('content_items')
+      .update({ approved: true, status: 'scheduled' })
+      .eq('id', content_item_id).eq('user_id', user.id)
 
     return NextResponse.json({ ok: true })
   } catch (err: any) {

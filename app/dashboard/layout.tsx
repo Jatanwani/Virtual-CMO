@@ -3,15 +3,11 @@ import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
+
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Middleware already guards /dashboard, but double-check here
   if (!user) {
     redirect('/auth/login')
   }
@@ -22,8 +18,18 @@ export default async function DashboardLayout({
     .eq('id', user.id)
     .single()
 
-  // If onboarding not complete, send them there
-  if (!profile?.onboarded) {
+  // If no profile row exists yet, create one then redirect to onboarding
+  if (!profile) {
+    await supabase.from('profiles').insert({
+      id: user.id,
+      email: user.email,
+      full_name: user.user_metadata?.full_name || '',
+      onboarded: false,
+    })
+    redirect('/onboarding')
+  }
+
+  if (!profile.onboarded) {
     redirect('/onboarding')
   }
 

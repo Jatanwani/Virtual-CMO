@@ -4,150 +4,139 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Profile } from '@/types/database'
 import {
-  LayoutDashboard, Zap, Calendar, FlaskConical, 
-  BarChart3, Settings, LogOut, TrendingUp
+  LayoutDashboard, Zap, Calendar, FlaskConical,
+  BarChart3, Settings, LogOut, Image, Clock,
+  PieChart, Globe, ChevronRight
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Overview & tasks' },
-  { href: '/dashboard/chat', label: 'CMO Brain', icon: Zap, description: 'AI strategy chat', badge: 'AI' },
-  { href: '/dashboard/content', label: 'Content Engine', icon: Calendar, description: 'Auto-generated calendar' },
-  { href: '/dashboard/experiments', label: 'Experiments', icon: FlaskConical, description: 'Growth hypothesis tracker' },
-  { href: '/dashboard/results', label: 'Results', icon: BarChart3, description: 'Submit & get feedback' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/dashboard/chat', label: 'CMO Brain', icon: Zap, badge: 'AI' },
+  { href: '/dashboard/content', label: 'Content Engine', icon: Calendar },
+  { href: '/dashboard/image', label: 'Image Generator', icon: Image, badge: 'FREE' },
+  { href: '/dashboard/schedule', label: 'Scheduler', icon: Clock },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: PieChart },
+  { href: '/dashboard/landing', label: 'Landing Builder', icon: Globe },
+  { href: '/dashboard/experiments', label: 'Experiments', icon: FlaskConical },
+  { href: '/dashboard/results', label: 'Results', icon: BarChart3 },
 ]
 
-interface SidebarProps {
-  profile: Profile
+interface Profile {
+  full_name?: string
+  email?: string
+  company_name?: string
+  company_logo_url?: string
+  avatar_url?: string
+  traction_score?: number
+  product?: string
 }
 
-export function Sidebar({ profile }: SidebarProps) {
+export function Sidebar({ profile }: { profile: Profile | null }) {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
 
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    window.location.href = '/auth/login'
   }
 
-  const score = profile.traction_score || 0
-  const initials = (profile.full_name || profile.email || 'U')
-    .split(' ')
-    .map(n => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
+  const isActive = (href: string, exact?: boolean) => {
+    if (exact) return pathname === href
+    return pathname.startsWith(href)
+  }
+
+  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Founder'
+  const companyName = profile?.company_name || profile?.product?.slice(0, 25) || 'My Startup'
+  const score = profile?.traction_score || 0
 
   return (
-    <div className="w-[240px] h-full bg-[#0D0C0B] flex flex-col flex-shrink-0">
+    <aside className="w-60 flex-shrink-0 bg-[#0D0C0B] flex flex-col h-full">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/8">
+      <div className="px-5 py-5 border-b border-white/5">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-[#FF8C1A] rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+          <div className="w-8 h-8 bg-[#FF8C1A] rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 1L12 4.5V10L7 13L2 10V4.5L7 1Z" fill="white"/>
             </svg>
           </div>
           <div>
-            <p style={{fontFamily: 'Cabinet Grotesk, sans-serif'}} className="text-white font-bold text-[13.5px] leading-none">Virtual CMO OS</p>
-            <p className="text-white/30 text-[10px] mt-0.5">Growth Brain</p>
+            <p className="text-white font-bold text-[14px] leading-tight">Virtual CMO</p>
+            <p className="text-white/30 text-[10px] leading-tight">Growth OS</p>
           </div>
         </div>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <div className="text-[10px] font-semibold text-white/25 uppercase tracking-widest px-2 mb-3">
-          Navigation
-        </div>
-
         {NAV_ITEMS.map(item => {
-          const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+          const active = isActive(item.href, item.exact)
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+            <Link key={item.href} href={item.href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all group ${
                 active
                   ? 'bg-white/10 text-white'
-                  : 'text-white/45 hover:text-white/80 hover:bg-white/5'
-              }`}
-            >
-              {active && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#FF8C1A] rounded-r-full" />
-              )}
-              <item.icon size={15} className={active ? 'text-[#FF8C1A]' : ''} />
-              <span className="text-[13px] font-medium flex-1">{item.label}</span>
+                  : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+              }`}>
+              <item.icon size={15} className={active ? 'text-[#FF8C1A]' : 'text-white/40 group-hover:text-white/60'} />
+              <span className="flex-1">{item.label}</span>
               {item.badge && (
-                <span className="text-[9px] font-bold bg-[#FF8C1A]/20 text-[#FF8C1A] px-1.5 py-0.5 rounded uppercase tracking-wide">
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                  item.badge === 'AI' ? 'bg-[#FF8C1A]/20 text-[#FF8C1A]' : 'bg-green-500/20 text-green-400'
+                }`}>
                   {item.badge}
                 </span>
               )}
+              {active && <ChevronRight size={12} className="text-white/30" />}
             </Link>
           )
         })}
-
-        <div className="text-[10px] font-semibold text-white/25 uppercase tracking-widest px-2 mt-5 mb-3">
-          Account
-        </div>
-        <Link
-          href="/dashboard/settings"
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-            pathname === '/dashboard/settings'
-              ? 'bg-white/10 text-white'
-              : 'text-white/45 hover:text-white/80 hover:bg-white/5'
-          }`}
-        >
-          <Settings size={15} />
-          <span className="text-[13px] font-medium">Settings</span>
-        </Link>
       </nav>
 
-      {/* Traction Score */}
-      <div className="px-4 pb-3">
-        <div className="bg-white/5 border border-white/8 rounded-xl p-3.5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <TrendingUp size={12} className="text-[#FF8C1A]" />
-              <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wide">Traction Score</span>
+      {/* Traction score */}
+      {score > 0 && (
+        <div className="px-4 pb-3">
+          <div className="bg-white/5 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold text-white/30 uppercase tracking-wider">Traction Score</span>
+              <span className="text-[13px] font-black text-[#FF8C1A]">{score}</span>
             </div>
-            <span style={{fontFamily: 'Cabinet Grotesk, sans-serif'}} className="text-white font-black text-[18px]">
-              {score}<span className="text-white/30 text-[12px] font-normal">/100</span>
-            </span>
+            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-[#FF8C1A] rounded-full transition-all" style={{ width: `${score}%` }} />
+            </div>
           </div>
-          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#FF8C1A] to-[#E67300] rounded-full transition-all duration-1000"
-              style={{ width: `${score}%` }}
-            />
-          </div>
-          <p className="text-[10.5px] text-white/25 mt-2">
-            {score < 30 ? 'Just getting started' : score < 60 ? 'Building momentum' : score < 80 ? 'Strong execution' : 'Elite performer'}
-          </p>
         </div>
-      </div>
+      )}
 
-      {/* Profile */}
-      <div className="px-4 pb-5 border-t border-white/8 pt-3">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF8C1A] to-[#E67300] flex items-center justify-center text-white font-bold text-[11px] flex-shrink-0">
-            {initials}
+      {/* Bottom: Settings + Profile */}
+      <div className="border-t border-white/5 px-3 py-3 space-y-0.5">
+        <Link href="/dashboard/settings"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+            pathname === '/dashboard/settings' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+          }`}>
+          <Settings size={15} className="text-white/40" />
+          Settings
+        </Link>
+
+        {/* Profile */}
+        <div className="flex items-center gap-3 px-3 py-2.5 mt-1">
+          <div className="w-7 h-7 rounded-lg bg-[#FF8C1A]/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {profile?.avatar_url || profile?.company_logo_url ? (
+              <img src={profile.avatar_url || profile.company_logo_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[#FF8C1A] font-bold text-[11px]">{displayName[0]?.toUpperCase()}</span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[12.5px] font-semibold text-white truncate">{profile.full_name || 'Founder'}</p>
-            <p className="text-[11px] text-white/30 truncate">{profile.email}</p>
+            <p className="text-white text-[12px] font-semibold truncate">{displayName}</p>
+            <p className="text-white/30 text-[10px] truncate">{companyName}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-white/30 hover:text-white/70 transition-colors p-1"
-            title="Sign out"
-          >
-            <LogOut size={14} />
+          <button onClick={handleSignOut} className="text-white/20 hover:text-white/60 transition-colors" title="Sign out">
+            <LogOut size={13} />
           </button>
         </div>
       </div>
-    </div>
+    </aside>
   )
 }

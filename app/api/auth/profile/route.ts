@@ -1,34 +1,62 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
-export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-  
+export async function GET() {
   try {
-    const body = await request.json();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    return NextResponse.json({ profile })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // We use .upsert to either create a new profile or update an existing one
-    const { error } = await supabase
+    const body = await request.json()
+
+    // Whitelist all allowed fields
+    const allowed = [
+      'full_name', 'avatar_url',
+      'company_name', 'company_logo_url', 'website', 'team_size',
+      'founder_phone', 'founder_email',
+      'linkedin_url', 'twitter_url', 'instagram_url', 'facebook_url',
+      'linkedin_connected', 'twitter_connected', 'instagram_connected', 'facebook_connected',
+      'linkedin_handle', 'twitter_handle', 'instagram_handle', 'facebook_handle',
+      'product', 'problem', 'icp', 'stage', 'traction', 'channels',
+      'goal_30', 'time_available', 'budget', 'archetype',
+    ]
+
+    const updates: Record<string, any> = {}
+    allowed.forEach(key => {
+      if (body[key] !== undefined) {
+        // Convert string booleans
+        if (key.endsWith('_connected')) {
+          updates[key] = body[key] === 'true' || body[key] === true
+        } else {
+          updates[key] = body[key]
+        }
+      }
+    })
+
+    updates.updated_at = new Date().toISOString()
+
+    const { data: profile, error } = await supabase
       .from('profiles')
-      .upsert({
-        id: user.id,
-        company_name: body.company_name,
-        website: body.website,
-        industry: body.industry, // General purpose field
-        solving_problem: body.solving_problem,
-        updated_at: new Date().toISOString(),
-      });
+      .update(updates)
+      .eq('id', user.id)
+      .select()
+      .single()
 
-    if (error) throw error;
-
-    return NextResponse.json({ message: 'Profile updated successfully' });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) throw error
+    return NextResponse.json({ profile })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

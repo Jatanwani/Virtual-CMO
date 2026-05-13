@@ -123,3 +123,71 @@ export type ChatMessage = Database['public']['Tables']['chat_messages']['Row']
 export type Experiment = Database['public']['Tables']['experiments']['Row']
 export type Result = Database['public']['Tables']['results']['Row']
 export type ContentItem = Database['public']['Tables']['content_items']['Row']
+
+// Extended types for new features
+export interface SocialAccount {
+  id: string
+  user_id: string
+  platform: 'linkedin' | 'twitter' | 'instagram' | 'facebook'
+  account_name: string | null
+  account_id: string | null
+  access_token: string | null
+  refresh_token: string | null
+  token_expires_at: string | null
+  connected: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ScheduledPost {
+  id: string
+  user_id: string
+  content_item_id: string | null
+  platform: string
+  content: string
+  image_url: string | null
+  scheduled_at: string
+  status: 'pending' | 'posted' | 'failed' | 'cancelled'
+  error_message: string | null
+  retry_count: number
+  posted_at: string | null
+  created_at: string
+}
+
+export interface GeneratedImage {
+  id: string
+  user_id: string
+  content_item_id: string | null
+  prompt: string | null
+  image_url: string
+  platform: string | null
+  width: number | null
+  height: number | null
+  provider: string
+  created_at: string
+}
+
+export interface LandingPage {
+  id: string
+  user_id: string
+  title: string
+  slug: string | null
+  html_content: string | null
+  css_content: string | null
+  published: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PostAnalytics {
+  id: string
+  user_id: string
+  scheduled_post_id: string | null
+  platform: string | null
+  impressions: number
+  likes: number
+  comments: number
+  shares: number
+  clicks: number
+  recorded_at: string
+}
