@@ -76,12 +76,13 @@ export default function OnboardingPage() {
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id,
+          email: user.email,
           ...data,
           onboarded: true,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
+        }, { onConflict: 'id' })
 
       if (updateError) throw updateError
 
