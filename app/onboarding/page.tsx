@@ -86,7 +86,7 @@ export default function OnboardingPage() {
 
       if (updateError) throw updateError
 
-      window.location.href = '/dashboard'
+      window.location.href = '/api/auth/redirect'
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.')
       setLoading(false)
@@ -218,3 +218,4 @@ export default function OnboardingPage() {
     </div>
   )
 }
+
