@@ -1,83 +1,16 @@
-/* 1. Import Fonts at the very top */
-@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500,400&f[]=satoshi@700,500,400,300&display=swap');
-
-/* 2. Tailwind Directives */
-/* If you see red squiggly lines here, you can ignore them—they are just IDE warnings. 
-   Alternatively, install the "Tailwind CSS IntelliSense" extension in VS Code. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-cabinet: 'Cabinet Grotesk', sans-serif;
-  --font-satoshi: 'Satoshi', sans-serif;
-  --font-geist-mono: 'GeistMono', monospace;
-  --score: 0;
-}
-
-/* 3. Global Reset */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  --background: #FAFAF8;
+  --foreground: #0D0C0B;
 }
 
 body {
-  font-family: var(--font-satoshi), system-ui, sans-serif;
-  background-color: #FAFAF8;
-  color: #0D0C0B;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Satoshi', 'Cabinet Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
 }
-
-/* 4. Custom UI Elements */
-.prose-cmo {
-  line-height: 1.75;
-}
-
-.prose-cmo h1, .prose-cmo h2, .prose-cmo h3 { 
-  font-family: var(--font-cabinet);
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  margin-top: 1rem;
-}
-
-.shimmer {
-  background: linear-gradient(90deg, #F5F3EF 25%, #EDE9E3 50%, #F5F3EF 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite linear;
-}
-
-.grain::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.4;
-}
-
-/* 5. Missing Animations Definitions */
-@keyframes shimmer {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes typing-dot {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
-}
-
-.typing-dot:nth-child(1) { animation: typing-dot 1.2s 0s ease-in-out infinite; }
-.typing-dot:nth-child(2) { animation: typing-dot 1.2s 0.2s ease-in-out infinite; }
-.typing-dot:nth-child(3) { animation: typing-dot 1.2s 0.4s ease-in-out infinite; }
