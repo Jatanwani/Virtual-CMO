@@ -18,21 +18,27 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] flex flex-col antialiased selection:bg-[#FF8C1A]/10 selection:text-[#0D0C0B]">
-      {/* ─── NAVIGATION BAR ─── */}
-      <nav className="px-8 py-5 flex items-center justify-between border-b border-[#EDE9E3] bg-[#FAFAF8]">
+    <div 
+      className="min-h-screen flex flex-col antialiased" 
+      style={{ backgroundColor: '#FAFAF8', color: '#0D0C0B' }}
+    >
+      {/* ─── STICKY HEADER / NAVIGATION ─── */}
+      <nav 
+        className="px-8 py-5 flex items-center justify-between" 
+        style={{ borderBottom: '1px solid #EDE9E3', backgroundColor: '#FAFAF8' }}
+      >
         <div className="flex items-center gap-2">
-          {/* New Custom Circular VC Logo */}
+          {/* Circular Custom Image Logo Asset Wrapper */}
           <div className="w-[28px] h-[28px] flex items-center justify-center overflow-hidden rounded-full">
             <img 
               src="/virtual-cmo-logo.png" 
-              alt="Virtual CMO OS Logo" 
+              alt="Virtual CMO OS" 
               className="w-full h-full object-cover block"
             />
           </div>
           <span 
-            style={{ fontFamily: 'Cabinet Grotesk, Satoshi, sans-serif' }} 
-            className="font-bold text-[15px] text-[#0D0C0B] tracking-tight"
+            className="font-bold text-[15px]" 
+            style={{ fontFamily: 'Cabinet Grotesk, Satoshi, sans-serif', trackingTight: '-0.025em', color: '#0D0C0B' }}
           >
             Virtual CMO OS
           </span>
@@ -41,58 +47,71 @@ export default async function HomePage() {
         <div className="flex items-center gap-6">
           <Link 
             href="/auth/login" 
-            className="text-[13.5px] text-[#524F4A] hover:text-[#0D0C0B] transition-colors font-medium"
+            className="text-[13.5px] transition-colors font-medium"
+            style={{ color: '#524F4A' }}
           >
             Sign in
           </Link>
           <Link 
             href="/auth/signup" 
-            className="bg-[#0D0C0B] text-white text-[13.5px] px-4 py-2 rounded-lg hover:bg-[#2C2B29] transition-colors font-medium"
+            className="text-[13.5px] px-4 py-2 rounded-lg transition-colors font-medium text-white"
+            style={{ backgroundColor: '#0D0C0B' }}
           >
             Get started free →
           </Link>
         </div>
       </nav>
 
-      {/* ─── HERO CONTENT SECTION ─── */}
+      {/* ─── HERO BODY ACCELERATION CONTAINER ─── */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-24 text-center">
-        {/* Upper Micro-Badge */}
-        <div className="inline-flex items-center gap-2 bg-[#FFF8F0] border border-[#FFD4A3] text-[#E67300] text-[12px] font-semibold px-3 py-1.5 rounded-full mb-8 uppercase tracking-wide">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#FF8C1A] animate-pulse" />
+        {/* Upper Micro-Badge Capsule */}
+        <div 
+          className="inline-flex items-center gap-2 text-[12px] font-semibold px-3 py-1.5 rounded-full mb-8 uppercase tracking-wide"
+          style={{ backgroundColor: '#FFF8F0', border: '1px solid #FFD4A3', color: '#E67300' }}
+        >
+          <div 
+            className="w-1.5 h-1.5 rounded-full animate-pulse" 
+            style={{ backgroundColor: '#FF8C1A' }}
+          />
           AI-powered • Always on • Built for traction
         </div>
         
-        {/* Hero Pitch Headline */}
+        {/* Main Heading Text Copy */}
         <h1 
-          style={{ fontFamily: 'Cabinet Grotesk, Satoshi, sans-serif' }} 
-          className="text-6xl font-black text-[#0D0C0B] tracking-tight max-w-3xl leading-[1.05] mb-6"
+          className="text-6xl font-black tracking-tight max-w-3xl leading-[1.05] mb-6"
+          style={{ fontFamily: 'Cabinet Grotesk, Satoshi, sans-serif', color: '#0D0C0B' }}
         >
           Your personal CMO.<br />
-          <span className="text-[#FF8C1A]">Not a chatbot.</span>
+          <span style={{ color: '#FF8C1A' }}>Not a chatbot.</span>
         </h1>
         
-        {/* Body Description Text */}
-        <p className="text-[17px] text-[#524F4A] max-w-xl leading-relaxed mb-10 font-normal">
+        {/* Subtitle Description */}
+        <p 
+          className="text-[17px] max-w-xl leading-relaxed mb-10 font-normal"
+          style={{ color: '#524F4A' }}
+        >
           Get a world-class Chief Marketing Officer in your pocket. Custom GTM strategy, daily action plans, content engine, and real-time growth coaching — all tailored to your startup.
         </p>
 
-        {/* Action Button Links */}
+        {/* Dynamic Buttons */}
         <div className="flex items-center gap-3">
           <Link 
             href="/auth/signup" 
-            className="bg-[#0D0C0B] text-white px-7 py-3.5 rounded-xl text-[15px] font-semibold hover:bg-[#1A1714] transition-all hover:shadow-lg active:scale-98"
+            className="text-white px-7 py-3.5 rounded-xl text-[15px] font-semibold transition-all hover:shadow-lg"
+            style={{ backgroundColor: '#0D0C0B' }}
           >
             Start building traction →
           </Link>
           <Link 
             href="/auth/login" 
-            className="text-[#524F4A] px-5 py-3.5 text-[15px] font-medium hover:text-[#0D0C0B] transition-colors"
+            className="px-5 py-3.5 text-[15px] font-medium transition-colors"
+            style={{ color: '#524F4A' }}
           >
             Already have an account
           </Link>
         </div>
 
-        {/* Bottom Feature Pill Matrix */}
+        {/* Feature Pill Grid Matrix */}
         <div className="flex flex-wrap gap-2 justify-center mt-14 max-w-2xl">
           {[
             'GTM Strategy', 
@@ -106,7 +125,8 @@ export default async function HomePage() {
           ].map(feature => (
             <span 
               key={feature} 
-              className="bg-white border border-[#EDE9E3] text-[#524F4A] text-[12.5px] px-3 py-1.5 rounded-full font-medium shadow-none select-none transition-colors duration-150 hover:bg-[#FAFAF8]"
+              className="text-[12.5px] px-3 py-1.5 rounded-full font-medium shadow-none select-none"
+              style={{ backgroundColor: '#FFFFFF', border: '1px solid #EDE9E3', color: '#524F4A' }}
             >
               {feature}
             </span>
