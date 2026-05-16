@@ -24,11 +24,14 @@ export default async function HomePage() {
     <div className="min-h-screen bg-[#FAFAF8] flex flex-col">
       {/* Nav */}
       <nav className="px-8 py-5 flex items-center justify-between border-b border-[#EDE9E3]">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-[#0D0C0B] rounded-lg flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1L12 4.5V10L7 13L2 10V4.5L7 1Z" fill="#FF8C1A"/>
-            </svg>
+        <div className="flex items-center gap-2.5">
+          {/* New VC Branding Image Box */}
+          <div className="w-8 h-8 flex items-center justify-center balance-render">
+            <img 
+              src="/virtual-cmo-logo.png" 
+              alt="Virtual CMO OS Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <span style={{fontFamily: 'Cabinet Grotesk, sans-serif'}} className="font-bold text-[15px] text-[#0D0C0B]">Virtual CMO OS</span>
         </div>
