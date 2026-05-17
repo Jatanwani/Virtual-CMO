@@ -39,7 +39,7 @@ const QUICK_PROMPTS = [
   { label: 'How to get my first 100 customers', icon: '🚀', action: 'chat' },
 ]
 
-const PLATFORMS = ['LinkedIn', 'Instagram', 'Twitter', 'Facebook']
+const PLATFORMS = ['LinkedIn', 'Instagram', 'X', 'Facebook']
 
 interface Props {
   profile: Profile | null
