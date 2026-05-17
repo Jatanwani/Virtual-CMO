@@ -42,12 +42,12 @@ interface ContentItem {
   created_at: string
 }
 
-const PLATFORMS = ['LinkedIn', 'Instagram', 'Twitter', 'Facebook']
+const PLATFORMS = ['LinkedIn', 'Instagram', 'X', 'Facebook']
 
 const PLATFORM_CHARS: Record<string, number> = {
   LinkedIn: 1500,
   Instagram: 500,
-  Twitter: 200,
+  X: 200,
   Facebook: 800,
 }
 
@@ -198,7 +198,7 @@ export function ContentPageClient({ profile, initialItems }: Props) {
     })
   }
 
-  const isTwitter = selectedPlatform === 'Twitter'
+  const isX = selectedPlatform === 'X'
   const approvedCount = contentPlan?.posts.filter(p => p.approved).length || 0
 
   return (
@@ -296,7 +296,7 @@ export function ContentPageClient({ profile, initialItems }: Props) {
 
                 <div>
                   <p className="text-[11px] font-bold text-[#A39E96] uppercase tracking-wider mb-1">
-                    Hook {isTwitter && <span className="text-[#FF8C1A]">(Twitter — keep short)</span>}
+                    Hook {isX && <span className="text-[#FF8C1A]">(X — keep short)</span>}
                   </p>
                   <p className="text-[14px] text-[#0D0C0B] font-semibold leading-snug">{post.hook}</p>
                 </div>
@@ -314,10 +314,10 @@ export function ContentPageClient({ profile, initialItems }: Props) {
                       {post.body?.length || 0}/{PLATFORM_CHARS[selectedPlatform]} chars
                     </span>
                   </div>
-                  <div className={`bg-[#FAFAF8] rounded-xl p-4 ${isTwitter ? 'border-2 border-sky-100' : ''}`}>
+                  <div className={`bg-[#FAFAF8] rounded-xl p-4 ${isX ? 'border-2 border-sky-100' : ''}`}>
                     <p className="text-[13px] text-[#524F4A] leading-relaxed whitespace-pre-line">{post.body}</p>
                   </div>
-                  {isTwitter && (post.body?.length || 0) > 200 && (
+                  {isX && (post.body?.length || 0) > 200 && (
                     <p className="text-red-500 text-[11px] mt-1 font-medium">
                       Warning: exceeds 200 character limit. Click Revise to regenerate.
                     </p>
