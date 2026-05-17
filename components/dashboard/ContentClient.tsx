@@ -1,307 +1,474 @@
 'use client'
 
-import { useState } from 'react'
-import { Profile, ContentItem } from '@/types/database'
-import { motion, AnimatePresence } from 'framer-motion'
-import toast from 'react-hot-toast'
-import {
-  Calendar, Sparkles, Copy, Check, ExternalLink,
-  Linkedin, Twitter, MessageSquare, X, CheckCircle
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Profile } from '@/types/database'
+import { RefreshCw, ThumbsUp, Image as ImageIcon, Download, Clock } from 'lucide-react'
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-
-const PLATFORM_CONFIG: Record<string, { color: string; bg: string; Icon: any }> = {
-  LinkedIn: { color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200', Icon: Linkedin },
-  Twitter: { color: 'text-sky-600', bg: 'bg-sky-50 border-sky-200', Icon: Twitter },
-  'Reddit/Slack': { color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200', Icon: MessageSquare },
-  default: { color: 'text-[#524F4A]', bg: 'bg-[#F5F3EF] border-[#EDE9E3]', Icon: MessageSquare },
+interface Post {
+  id?: string
+  day: string
+  day_name: string
+  pillar: string
+  topic: string
+  hook: string
+  body: string
+  cta: string
+  hashtags: string[]
+  image_prompt: string
+  image_url?: string
+  approved?: boolean
+  revising?: boolean
+  generating_image?: boolean
 }
 
-const STATUS_CONFIG = {
-  draft: { label: 'Draft', class: 'bg-[#F5F3EF] text-[#7A7670] border-[#EDE9E3]' },
-  scheduled: { label: 'Scheduled', class: 'bg-amber-50 text-amber-700 border-amber-200' },
-  published: { label: 'Published', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+interface ContentPlan {
+  platform: string
+  posts: Post[]
+}
+
+interface ContentItem {
+  id: string
+  hook: string
+  full_post: string
+  topic: string
+  platform: string
+  status: string
+  image_url?: string
+  hashtags?: string[]
+  cta?: string
+  image_prompt?: string
+  day?: string
+  approved?: boolean
+  created_at: string
+}
+
+const PLATFORMS = ['LinkedIn', 'Instagram', 'Twitter', 'Facebook']
+
+const PLATFORM_CHARS: Record<string, number> = {
+  LinkedIn: 1500,
+  Instagram: 500,
+  Twitter: 200,
+  Facebook: 800,
 }
 
 interface Props {
   profile: Profile | null
   initialItems: ContentItem[]
-  weekStart: string
 }
 
-export function ContentClient({ profile, initialItems, weekStart }: Props) {
-  const [items, setItems] = useState<ContentItem[]>(initialItems)
+export function ContentPageClient({ profile, initialItems }: Props) {
+  const [view, setView] = useState<'generate' | 'library'>('generate')
+  const [selectedPlatform, setSelectedPlatform] = useState('LinkedIn')
+  const [contentPlan, setContentPlan] = useState<ContentPlan | null>(null)
   const [generating, setGenerating] = useState(false)
-  const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null)
-  const [generatingPost, setGeneratingPost] = useState<string | null>(null)
-  const [copied, setCopied] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [items, setItems] = useState<ContentItem[]>(initialItems)
 
-  const generateCalendar = async () => {
+  // On mount, check if strategy was passed from CMO Brain
+  useEffect(() => {
+    const saved = sessionStorage.getItem('cmo_platform')
+    if (saved && PLATFORMS.includes(saved)) {
+      setSelectedPlatform(saved)
+    }
+  }, [])
+
+  const generatePlan = async () => {
     setGenerating(true)
+    setError('')
     try {
-      const res = await fetch('/api/content', {
+      const strategyRaw = sessionStorage.getItem('cmo_strategy')
+      const strategy = strategyRaw ? JSON.parse(strategyRaw) : null
+
+      const res = await fetch('/api/content-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate_calendar' }),
+        body: JSON.stringify({ strategy, platform: selectedPlatform }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`)
-      if (data.items) {
-        setItems(data.items)
-        toast.success('Content calendar generated!')
-      }
+      if (data.error) throw new Error(data.error)
+      setContentPlan(data.plan)
+      setView('generate')
     } catch (err: any) {
-      console.error('Content generation error:', err)
-      toast.error(err.message || 'Failed to generate calendar — check API key')
+      setError(err.message)
+    } finally {
+      setGenerating(false)
     }
-    setGenerating(false)
   }
 
-  const generatePost = async (item: ContentItem) => {
-    if (item.full_post) {
-      setSelectedItem(item)
-      return
-    }
-    setGeneratingPost(item.id)
+  const generateImage = async (postIndex: number) => {
+    if (!contentPlan) return
+    const post = contentPlan.posts[postIndex]
+    setContentPlan(prev => {
+      if (!prev) return prev
+      const posts = [...prev.posts]
+      posts[postIndex] = { ...posts[postIndex], generating_image: true }
+      return { ...prev, posts }
+    })
     try {
-      const res = await fetch('/api/content', {
+      const res = await fetch('/api/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate_post', itemId: item.id }),
+        body: JSON.stringify({
+          prompt: post.image_prompt,
+          platform: selectedPlatform.toLowerCase(),
+          content_item_id: post.id,
+        }),
       })
       const data = await res.json()
-      if (data.item) {
-        setItems(prev => prev.map(i => i.id === item.id ? data.item : i))
-        setSelectedItem(data.item)
-      }
+      if (data.error) throw new Error(data.error)
+      setContentPlan(prev => {
+        if (!prev) return prev
+        const posts = [...prev.posts]
+        posts[postIndex] = { ...posts[postIndex], image_url: data.image_url, generating_image: false }
+        return { ...prev, posts }
+      })
     } catch {
-      toast.error('Failed to generate post')
+      setContentPlan(prev => {
+        if (!prev) return prev
+        const posts = [...prev.posts]
+        posts[postIndex] = { ...posts[postIndex], generating_image: false }
+        return { ...prev, posts }
+      })
     }
-    setGeneratingPost(null)
   }
 
-  const copyPost = async (text: string, id: string) => {
-    await navigator.clipboard.writeText(text)
-    setCopied(id)
-    toast.success('Copied to clipboard!')
-    setTimeout(() => setCopied(null), 2000)
-  }
-
-  const updateStatus = async (id: string, status: 'draft' | 'scheduled' | 'published') => {
-    await fetch('/api/content', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status }),
+  const revisePost = async (postIndex: number) => {
+    if (!contentPlan) return
+    const post = contentPlan.posts[postIndex]
+    setContentPlan(prev => {
+      if (!prev) return prev
+      const posts = [...prev.posts]
+      posts[postIndex] = { ...posts[postIndex], revising: true }
+      return { ...prev, posts }
     })
-    setItems(prev => prev.map(i => i.id === id ? { ...i, status } : i))
+    try {
+      const res = await fetch('/api/content-plan/revise', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content_item_id: post.id,
+          topic: post.topic,
+          pillar: post.pillar,
+          platform: selectedPlatform,
+        }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setContentPlan(prev => {
+        if (!prev) return prev
+        const posts = [...prev.posts]
+        posts[postIndex] = {
+          ...posts[postIndex],
+          hook: data.revised.hook,
+          body: data.revised.body,
+          cta: data.revised.cta,
+          hashtags: data.revised.hashtags,
+          image_prompt: data.revised.image_prompt,
+          image_url: undefined,
+          approved: false,
+          revising: false,
+        }
+        return { ...prev, posts }
+      })
+    } catch {
+      setContentPlan(prev => {
+        if (!prev) return prev
+        const posts = [...prev.posts]
+        posts[postIndex] = { ...posts[postIndex], revising: false }
+        return { ...prev, posts }
+      })
+    }
   }
 
-  const itemsByDay = DAYS.reduce((acc, day) => {
-    acc[day] = items.filter(i => i.day === day)
-    return acc
-  }, {} as Record<string, ContentItem[]>)
+  const approvePost = async (postIndex: number) => {
+    if (!contentPlan) return
+    const post = contentPlan.posts[postIndex]
+    if (post.id) {
+      await fetch('/api/content-plan/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content_item_id: post.id }),
+      })
+    }
+    setContentPlan(prev => {
+      if (!prev) return prev
+      const posts = [...prev.posts]
+      posts[postIndex] = { ...posts[postIndex], approved: true }
+      return { ...prev, posts }
+    })
+  }
 
-  const publishedCount = items.filter(i => i.status === 'published').length
-  const totalItems = items.length
+  const isTwitter = selectedPlatform === 'Twitter'
+  const approvedCount = contentPlan?.posts.filter(p => p.approved).length || 0
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 style={{fontFamily: 'Cabinet Grotesk, sans-serif'}} className="text-xl font-black text-[#0D0C0B]">
-              This Week&apos;s Content
-            </h2>
-            {totalItems > 0 && (
-              <span className="bg-[#F5F3EF] border border-[#EDE9E3] text-[#7A7670] text-[12px] font-medium px-2.5 py-1 rounded-full">
-                {publishedCount}/{totalItems} published
+          <h1 className="text-2xl font-black text-[#0D0C0B]">Content Engine</h1>
+          <p className="text-[#7A7670] text-[14px] mt-1">Generate 7 days of platform-optimized content</p>
+        </div>
+        {contentPlan && (
+          <span className="text-[13px] text-[#7A7670] bg-white border border-[#EDE9E3] px-3 py-1.5 rounded-lg">
+            {approvedCount}/{contentPlan.posts.length} approved
+          </span>
+        )}
+      </div>
+
+      {/* Platform selector + Generate button */}
+      <div className="bg-white border border-[#EDE9E3] rounded-2xl p-5">
+        <p className="text-[12px] font-bold text-[#A39E96] uppercase tracking-wider mb-3">Select Platform</p>
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {PLATFORMS.map(p => (
+            <button
+              key={p}
+              onClick={() => setSelectedPlatform(p)}
+              className={`py-2.5 px-3 rounded-xl text-[13px] font-semibold border transition-all ${
+                selectedPlatform === p
+                  ? 'bg-[#0D0C0B] text-white border-[#0D0C0B]'
+                  : 'bg-[#F5F3EF] text-[#524F4A] border-[#EDE9E3] hover:border-[#0D0C0B]'
+              }`}
+            >
+              <div>{p}</div>
+              <div className="text-[10px] opacity-60 mt-0.5">max {PLATFORM_CHARS[p]} chars</div>
+            </button>
+          ))}
+        </div>
+
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-[13px] px-4 py-3 rounded-xl">
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={generatePlan}
+          disabled={generating}
+          className="w-full bg-[#FF8C1A] text-white py-3 rounded-xl text-[14px] font-bold hover:bg-[#E67300] disabled:opacity-50 transition-colors"
+        >
+          {generating
+            ? 'Generating your 7-day content plan...'
+            : contentPlan
+              ? `Regenerate for ${selectedPlatform}`
+              : `Generate 7-Day ${selectedPlatform} Content`}
+        </button>
+
+        {generating && (
+          <p className="text-center text-[12px] text-[#A39E96] mt-2">
+            Writing platform-optimized posts, hooks, CTAs and image prompts...
+          </p>
+        )}
+      </div>
+
+      {/* Content cards */}
+      {contentPlan && contentPlan.posts.map((post, i) => (
+        <div
+          key={i}
+          className={`bg-white border rounded-2xl overflow-hidden transition-all ${
+            post.approved ? 'border-green-300 shadow-sm shadow-green-50' : 'border-[#EDE9E3]'
+          }`}
+        >
+          {/* Day header */}
+          <div className="flex items-center justify-between px-5 py-3 bg-[#F5F3EF] border-b border-[#EDE9E3]">
+            <div className="flex items-center gap-3">
+              <span className="font-bold text-[#0D0C0B] text-[14px]">{post.day} — {post.day_name}</span>
+              <span className="bg-[#FF8C1A]/15 text-[#E67300] text-[11px] font-bold px-2 py-0.5 rounded-full">
+                {post.pillar}
+              </span>
+              <span className="text-[11px] text-[#A39E96]">{selectedPlatform}</span>
+            </div>
+            {post.approved && (
+              <span className="flex items-center gap-1 text-green-600 text-[12px] font-semibold">
+                <ThumbsUp size={12} /> Approved
               </span>
             )}
           </div>
-          <p className="text-[13px] text-[#A39E96] mt-1">Week of {weekStart}</p>
-        </div>
-        <button
-          onClick={generateCalendar}
-          disabled={generating}
-          className="flex items-center gap-2 bg-[#0D0C0B] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl hover:bg-[#1A1714] transition-all disabled:opacity-50"
-        >
-          <Sparkles size={14} className={generating ? 'animate-spin' : ''} />
-          {generating ? 'Generating...' : items.length ? 'Regenerate Week' : 'Generate This Week'}
-        </button>
-      </div>
 
-      {/* Empty state */}
-      {!generating && items.length === 0 && (
-        <div className="bg-white border border-[#EDE9E3] rounded-2xl px-8 py-16 text-center shadow-card">
-          <div className="w-14 h-14 bg-[#F5F3EF] rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <Calendar size={24} className="text-[#FF8C1A]" />
-          </div>
-          <h3 style={{fontFamily: 'Cabinet Grotesk, sans-serif'}} className="text-xl font-bold text-[#0D0C0B] mb-2">No content plan yet</h3>
-          <p className="text-[14px] text-[#A39E96] max-w-md mx-auto mb-6">
-            Your CMO will generate a full week of platform-specific content ideas tailored to your product, ICP, and growth goals.
-          </p>
-          <button
-            onClick={generateCalendar}
-            className="bg-[#0D0C0B] text-white px-8 py-3 rounded-xl text-[14px] font-semibold hover:bg-[#1A1714] transition-all"
-          >
-            Generate My Content Calendar →
-          </button>
-        </div>
-      )}
-
-      {/* Generating shimmer */}
-      {generating && (
-        <div className="grid grid-cols-5 gap-3">
-          {DAYS.map(day => (
-            <div key={day} className="space-y-3">
-              <div className="h-5 rounded shimmer w-20" />
-              <div className="h-28 rounded-xl shimmer" />
-              <div className="h-28 rounded-xl shimmer" />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Calendar grid */}
-      {!generating && items.length > 0 && (
-        <div className="grid grid-cols-5 gap-3">
-          {DAYS.map(day => (
-            <div key={day}>
-              <p className="text-[11px] font-bold text-[#A39E96] uppercase tracking-wider mb-2.5">{day.slice(0, 3)}</p>
-              <div className="space-y-2">
-                {itemsByDay[day]?.map(item => {
-                  const platform = PLATFORM_CONFIG[item.platform || ''] || PLATFORM_CONFIG.default
-                  const status = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.draft
-                  return (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className={`bg-white border rounded-xl p-3 cursor-pointer hover:shadow-card-hover transition-all group ${item.status === 'published' ? 'border-emerald-200 bg-emerald-50/30' : 'border-[#EDE9E3]'}`}
-                      onClick={() => generatePost(item)}
-                    >
-                      <div className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md border mb-2 ${platform.bg} ${platform.color}`}>
-                        <platform.Icon size={8} />
-                        {item.platform}
-                      </div>
-                      <p className="text-[11.5px] font-semibold text-[#0D0C0B] leading-tight mb-1 line-clamp-2">
-                        {item.topic}
-                      </p>
-                      <p className="text-[10.5px] text-[#A39E96] leading-snug line-clamp-2 mb-2">
-                        {item.hook}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border uppercase tracking-wide ${status.class}`}>
-                          {status.label}
-                        </span>
-                        {generatingPost === item.id ? (
-                          <Sparkles size={11} className="text-[#FF8C1A] animate-spin" />
-                        ) : item.full_post ? (
-                          <CheckCircle size={11} className="text-emerald-500" />
-                        ) : (
-                          <ExternalLink size={10} className="text-[#C9C4BC] group-hover:text-[#7A7670] transition-colors" />
-                        )}
-                      </div>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Post modal */}
-      <AnimatePresence>
-        {selectedItem && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={e => e.target === e.currentTarget && setSelectedItem(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-2xl shadow-modal w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
-            >
-              <div className="px-6 py-4 border-b border-[#F5F3EF] flex items-center justify-between">
+          <div className="p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Left: Content */}
+              <div className="space-y-4">
                 <div>
-                  <p style={{fontFamily: 'Cabinet Grotesk, sans-serif'}} className="font-bold text-[#0D0C0B] text-[15px]">{selectedItem.topic}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[11px] text-[#A39E96]">{selectedItem.day} · {selectedItem.platform}</span>
-                    <span className="text-[11px] text-[#A39E96]">·</span>
-                    <span className="text-[11px] text-[#A39E96]">{selectedItem.type}</span>
-                  </div>
+                  <p className="text-[11px] font-bold text-[#A39E96] uppercase tracking-wider mb-1">Topic</p>
+                  <p className="font-semibold text-[#0D0C0B] text-[14px]">{post.topic}</p>
                 </div>
-                <button
-                  onClick={() => setSelectedItem(null)}
-                  className="w-7 h-7 rounded-lg bg-[#F5F3EF] flex items-center justify-center hover:bg-[#EDE9E3] transition-colors"
-                >
-                  <X size={14} className="text-[#7A7670]" />
-                </button>
+
+                <div>
+                  <p className="text-[11px] font-bold text-[#A39E96] uppercase tracking-wider mb-1">
+                    Hook {isTwitter && <span className="text-[#FF8C1A]">(Twitter — keep short)</span>}
+                  </p>
+                  <p className="text-[14px] text-[#0D0C0B] font-semibold leading-snug">{post.hook}</p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[11px] font-bold text-[#A39E96] uppercase tracking-wider">
+                      Post Body
+                    </p>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      (post.body?.length || 0) <= PLATFORM_CHARS[selectedPlatform]
+                        ? 'bg-green-50 text-green-600'
+                        : 'bg-red-50 text-red-500'
+                    }`}>
+                      {post.body?.length || 0}/{PLATFORM_CHARS[selectedPlatform]} chars
+                    </span>
+                  </div>
+                  <div className={`bg-[#FAFAF8] rounded-xl p-4 ${isTwitter ? 'border-2 border-sky-100' : ''}`}>
+                    <p className="text-[13px] text-[#524F4A] leading-relaxed whitespace-pre-line">{post.body}</p>
+                  </div>
+                  {isTwitter && (post.body?.length || 0) > 200 && (
+                    <p className="text-red-500 text-[11px] mt-1 font-medium">
+                      Warning: exceeds 200 character limit. Click Revise to regenerate.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-bold text-[#A39E96] uppercase tracking-wider mb-1">CTA</p>
+                  <p className="text-[13px] text-[#0D0C0B] font-medium">{post.cta}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {post.hashtags?.map((tag, j) => (
+                    <span key={j} className="bg-blue-50 text-blue-600 text-[11px] px-2 py-0.5 rounded-full font-medium">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6">
-                {selectedItem.full_post ? (
-                  <div className="bg-[#FAFAF8] border border-[#EDE9E3] rounded-xl p-5">
-                    <pre className="whitespace-pre-wrap text-[13.5px] text-[#0D0C0B] leading-relaxed font-[inherit]">
-                      {selectedItem.full_post}
-                    </pre>
+              {/* Right: Image */}
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold text-[#A39E96] uppercase tracking-wider">AI Image</p>
+
+                {post.image_url ? (
+                  <div className="relative group">
+                    <img
+                      src={post.image_url}
+                      alt="Post visual"
+                      className="w-full rounded-xl border border-[#EDE9E3]"
+                    />
+                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => generateImage(i)}
+                        className="bg-white/90 backdrop-blur text-[#524F4A] p-2 rounded-lg hover:bg-white shadow-sm"
+                        title="Regenerate image"
+                      >
+                        <RefreshCw size={14} />
+                      </button>
+                      <a
+                        href={post.image_url}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-white/90 backdrop-blur text-[#524F4A] p-2 rounded-lg hover:bg-white shadow-sm"
+                        title="Download image"
+                      >
+                        <Download size={14} />
+                      </a>
+                    </div>
+                  </div>
+                ) : post.generating_image ? (
+                  <div className="bg-[#F5F3EF] rounded-xl h-48 flex flex-col items-center justify-center gap-3">
+                    <div className="w-8 h-8 border-2 border-[#FF8C1A] border-t-transparent rounded-full animate-spin" />
+                    <p className="text-[12px] text-[#A39E96]">Generating image... (10-20 sec)</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-[11px] font-bold text-[#A39E96] uppercase tracking-wider mb-1">Hook</p>
-                      <p className="text-[13.5px] text-[#0D0C0B] font-medium">{selectedItem.hook}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-bold text-[#A39E96] uppercase tracking-wider mb-1">CTA</p>
-                      <p className="text-[13.5px] text-[#524F4A]">{selectedItem.cta}</p>
-                    </div>
-                    <button
-                      onClick={() => generatePost(selectedItem)}
-                      className="w-full bg-[#0D0C0B] text-white py-3 rounded-xl text-[13.5px] font-semibold hover:bg-[#1A1714] transition-all mt-4"
-                    >
-                      Generate Full Post →
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {selectedItem.full_post && (
-                <div className="px-6 py-4 border-t border-[#F5F3EF] flex items-center gap-3">
                   <button
-                    onClick={() => copyPost(selectedItem.full_post!, selectedItem.id)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-[#0D0C0B] text-white py-2.5 rounded-xl text-[13px] font-semibold hover:bg-[#1A1714] transition-all"
+                    onClick={() => generateImage(i)}
+                    className="w-full bg-[#F5F3EF] border-2 border-dashed border-[#EDE9E3] rounded-xl h-48 flex flex-col items-center justify-center gap-2 hover:border-[#FF8C1A] hover:bg-[#FFF8F0] transition-all group"
                   >
-                    {copied === selectedItem.id ? <Check size={14} /> : <Copy size={14} />}
-                    {copied === selectedItem.id ? 'Copied!' : 'Copy post'}
+                    <ImageIcon size={24} className="text-[#C9C4BC] group-hover:text-[#FF8C1A]" />
+                    <p className="text-[12px] text-[#A39E96] group-hover:text-[#FF8C1A] font-medium">
+                      Generate AI image (free)
+                    </p>
+                    <p className="text-[11px] text-[#C9C4BC]">Powered by Pollinations AI</p>
                   </button>
-                  <div className="flex gap-2">
-                    {(['draft', 'scheduled', 'published'] as const).map(s => (
-                      <button
-                        key={s}
-                        onClick={() => {
-                          updateStatus(selectedItem.id, s)
-                          setSelectedItem(prev => prev ? { ...prev, status: s } : null)
-                        }}
-                        className={`px-3 py-2.5 rounded-xl text-[12px] font-semibold border capitalize transition-all ${selectedItem.status === s ? STATUS_CONFIG[s].class : 'bg-white text-[#A39E96] border-[#EDE9E3] hover:border-[#C9C4BC]'}`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                )}
+
+                <p className="text-[10px] text-[#C9C4BC] leading-relaxed line-clamp-2">
+                  Prompt: {post.image_prompt}
+                </p>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 mt-5 pt-4 border-t border-[#F5F3EF]">
+              {post.approved ? (
+                <div className="flex-1 bg-green-50 border border-green-200 text-green-700 py-2.5 rounded-xl text-[13px] font-semibold text-center flex items-center justify-center gap-2">
+                  <ThumbsUp size={14} /> Approved and Scheduled
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => approvePost(i)}
+                    disabled={post.revising}
+                    className="flex-1 bg-[#0D0C0B] text-white py-2.5 rounded-xl text-[13px] font-semibold hover:bg-[#1A1714] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <ThumbsUp size={14} /> Approve & Schedule
+                  </button>
+                  <button
+                    onClick={() => revisePost(i)}
+                    disabled={post.revising}
+                    className="flex-1 border border-[#EDE9E3] text-[#524F4A] py-2.5 rounded-xl text-[13px] font-medium hover:border-[#0D0C0B] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {post.revising ? (
+                      <><RefreshCw size={14} className="animate-spin" /> Revising...</>
+                    ) : (
+                      <><RefreshCw size={14} /> Revise Post</>
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* All approved */}
+      {contentPlan && approvedCount === contentPlan.posts.length && contentPlan.posts.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
+          <div className="text-3xl mb-2">🎉</div>
+          <p className="font-bold text-green-800 text-[16px]">All 7 posts approved!</p>
+          <p className="text-[13px] text-green-600 mt-1">
+            Your content is saved. Go to the Scheduler to manage publishing dates.
+          </p>
+        </div>
+      )}
+
+      {/* Library of past content */}
+      {!contentPlan && initialItems.length > 0 && (
+        <div>
+          <h2 className="font-bold text-[#0D0C0B] text-[16px] mb-3">Previous Content</h2>
+          <div className="space-y-3">
+            {initialItems.slice(0, 10).map(item => (
+              <div key={item.id} className="bg-white border border-[#EDE9E3] rounded-2xl p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[11px] font-bold text-[#A39E96] uppercase bg-[#F5F3EF] px-2 py-0.5 rounded">
+                        {item.platform}
+                      </span>
+                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                        item.approved ? 'bg-green-50 text-green-600' : 'bg-yellow-50 text-yellow-600'
+                      }`}>
+                        {item.approved ? 'Approved' : item.status}
+                      </span>
+                    </div>
+                    <p className="font-semibold text-[#0D0C0B] text-[14px]">{item.hook || item.topic}</p>
+                    <p className="text-[12px] text-[#7A7670] mt-1 line-clamp-2">{item.full_post}</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-[11px] text-[#A39E96] flex-shrink-0">
+                    <Clock size={11} />
+                    {new Date(item.created_at).toLocaleDateString()}
                   </div>
                 </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
