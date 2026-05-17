@@ -3,36 +3,32 @@ import { createClient } from '@/lib/supabase/server'
 import { callGatewayJSON, buildFounderContext } from '@/lib/ai-gateway'
 
 const PLATFORM_RULES: Record<string, string> = {
-  LinkedIn: `LinkedIn post rules:
-- Long-form content, 800-1500 characters
-- Start with a bold hook line (standalone)
-- Use line breaks between paragraphs
-- Include personal story or data point
-- Professional but conversational tone
-- End with a thought-provoking question or CTA
-- 5-8 relevant hashtags`,
+  LinkedIn: `LinkedIn RULES (MANDATORY):
+- Body: minimum 800 characters, target 1200-1500 characters
+- Format: bold hook line, then double line breaks between paragraphs
+- Include: personal story or data point, specific numbers
+- Tone: professional but human
+- End with a question or CTA
+- 5-8 hashtags`,
 
-  Instagram: `Instagram post rules:
-- Medium length, 300-500 characters
-- Start with an attention-grabbing emoji or bold statement
-- Short punchy sentences
-- Emotional and visual storytelling
-- 10-15 relevant hashtags
-- End with a clear CTA`,
+  Instagram: `Instagram RULES (MANDATORY):
+- Body: 300-500 characters
+- Start with emoji + bold statement  
+- Short punchy sentences, emotional language
+- 10-15 hashtags
+- Clear CTA`,
 
-  Twitter: `Twitter/X post rules:
-- STRICT LIMIT: maximum 200 characters for the post body
-- Ultra concise and punchy
-- One powerful insight or hook
-- No fluff, every word counts
-- 2-3 hashtags maximum
-- Optional: add a thread indicator like (1/3) if needed`,
+  X: `X (Twitter) RULES (MANDATORY):
+- Body: EXACTLY 150-200 characters - count every character
+- One powerful punchy insight or hot take
+- Zero fluff - every word must earn its place
+- Maximum 3 hashtags (included in character count)
+- If your draft exceeds 200 chars, cut it down ruthlessly`,
 
-  Facebook: `Facebook post rules:
-- Conversational and community-focused
-- 400-800 characters
-- Ask questions to encourage comments
-- Relatable storytelling
+  Facebook: `Facebook RULES (MANDATORY):
+- Body: 400-800 characters
+- Conversational warm tone
+- Ask a question to drive comments
 - 3-5 hashtags`,
 }
 
@@ -46,35 +42,34 @@ export async function POST(request: Request) {
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     const p = (profile || {}) as any
 
-    const platformRules = PLATFORM_RULES[platform] || PLATFORM_RULES.LinkedIn
-    const isTwitter = platform === 'Twitter'
+    const rules = PLATFORM_RULES[platform] || PLATFORM_RULES.LinkedIn
+    const isX = platform === 'X'
 
-    const prompt = `You are a world-class social media content creator. Generate a 7-day content plan.
+    const prompt = `You are a world-class ${platform} content strategist. Generate a 7-day content plan.
 
 FOUNDER CONTEXT:
 ${buildFounderContext(p)}
 
-APPROVED STRATEGY:
-- Archetype: ${strategy?.archetype || 'Content-Led'}
-- Positioning: ${strategy?.one_liner || 'Not specified'}
-- Content Pillars: ${strategy?.content_pillars?.map((x: any) => x.name).join(', ') || 'Not specified'}
+STRATEGY:
+Archetype: ${strategy?.archetype || 'Content-Led'}
+Positioning: ${strategy?.one_liner || p.product || 'Not specified'}
+Pillars: ${strategy?.content_pillars?.map((x: any) => x.name).join(', ') || 'Education, Authority, Community'}
 
-PLATFORM: ${platform}
-${platformRules}
+${rules}
 
-Generate exactly 7 posts. Return ONLY this JSON:
+Generate exactly 7 posts. Return ONLY valid JSON:
 {
   "posts": [
     {
       "day": "Day 1",
       "day_name": "Monday",
-      "pillar": "content pillar name",
-      "topic": "specific topic title",
-      "hook": "${isTwitter ? 'Ultra short hook (max 50 chars)' : 'Attention-grabbing opening line'}",
-      "body": "${isTwitter ? 'Post body - MUST be under 200 characters total including hook' : 'Full post body with proper line breaks and formatting'}",
-      "cta": "${isTwitter ? 'Short CTA (max 30 chars)' : 'Specific call to action'}",
-      "hashtags": ${isTwitter ? '["hashtag1", "hashtag2"]' : '["hashtag1", "hashtag2", "hashtag3", "hashtag4", "hashtag5"]'},
-      "image_prompt": "Professional marketing visual for ${platform} - no text in image, high quality, relevant to topic"
+      "pillar": "pillar name",
+      "topic": "specific topic",
+      "hook": "opening line (for X keep under 60 chars)",
+      "body": "${isX ? 'MUST be 150-200 characters total. Count carefully. No more, no less.' : 'Full post body, properly formatted with line breaks'}",
+      "cta": "call to action",
+      "hashtags": ${isX ? '["tag1", "tag2"]' : '["tag1", "tag2", "tag3", "tag4", "tag5"]'},
+      "image_prompt": "detailed visual description for marketing image, no text in image, ${platform} dimensions"
     }
   ]
 }`
