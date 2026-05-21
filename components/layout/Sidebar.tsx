@@ -75,10 +75,8 @@ export function Sidebar({ profile }: { profile: Profile | null }) {
       {/* Logo */}
       <div className="px-5 py-5 border-b border-white/5 flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-[#FF8C1A] rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1L12 4.5V10L7 13L2 10V4.5L7 1Z" fill="white"/>
-            </svg>
+          <div className="w-9 h-9 rounded-full bg-[#FF8C1A] flex items-center justify-center flex-shrink-0">
+            <span className="text-[#0D0C0B] font-black text-[14px] tracking-tight leading-none">VC</span>
           </div>
           <div>
             <p className="text-white font-bold text-[14px] leading-tight">Virtual CMO</p>
