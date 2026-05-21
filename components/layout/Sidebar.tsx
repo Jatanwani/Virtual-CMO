@@ -5,24 +5,22 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, Zap, Calendar, FlaskConical,
-  BarChart3, Settings, LogOut, Image, Clock,
-  PieChart, Globe, ChevronRight, TrendingUp, Users
+  BarChart3, Settings, LogOut, Globe,
+  PieChart, ChevronRight, Users
 } from 'lucide-react'
+
+const CAPITAL_NAV = [
+  { href: '/dashboard/capital', label: 'Investor Intelligence', icon: Users, badge: 'NEW' },
+]
 
 const GROWTH_NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true },
   { href: '/dashboard/chat', label: 'CMO Brain', icon: Zap, badge: 'AI' },
   { href: '/dashboard/content', label: 'Content Engine', icon: Calendar },
-  { href: '/dashboard/image', label: 'Image Generator', icon: Image, badge: 'FREE' },
-  { href: '/dashboard/schedule', label: 'Scheduler', icon: Clock },
   { href: '/dashboard/analytics', label: 'Analytics', icon: PieChart },
   { href: '/dashboard/landing', label: 'Landing Builder', icon: Globe },
   { href: '/dashboard/experiments', label: 'Experiments', icon: FlaskConical },
   { href: '/dashboard/results', label: 'Results', icon: BarChart3 },
-]
-
-const CAPITAL_NAV = [
-  { href: '/dashboard/capital', label: 'Investor Intelligence', icon: Users, badge: 'NEW' },
 ]
 
 interface Profile {
@@ -64,7 +62,7 @@ export function Sidebar({ profile }: { profile: Profile | null }) {
           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
             item.badge === 'AI' ? 'bg-[#FF8C1A]/20 text-[#FF8C1A]' :
             item.badge === 'NEW' ? 'bg-green-500/20 text-green-400' :
-            'bg-green-500/20 text-green-400'
+            'bg-white/10 text-white/40'
           }`}>{item.badge}</span>
         )}
         {active && <ChevronRight size={11} className="text-white/30" />}
@@ -90,20 +88,20 @@ export function Sidebar({ profile }: { profile: Profile | null }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-4">
+      <nav className="flex-1 px-3 py-4 space-y-5">
+        {/* Capital section - FIRST */}
+        <div>
+          <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest px-3 mb-2">Capital</p>
+          <div className="space-y-0.5">
+            {CAPITAL_NAV.map(item => <NavItem key={item.href} item={item} />)}
+          </div>
+        </div>
+
         {/* Growth section */}
         <div>
           <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest px-3 mb-2">Growth</p>
           <div className="space-y-0.5">
             {GROWTH_NAV.map(item => <NavItem key={item.href} item={item} />)}
-          </div>
-        </div>
-
-        {/* Capital section */}
-        <div>
-          <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest px-3 mb-2">Capital</p>
-          <div className="space-y-0.5">
-            {CAPITAL_NAV.map(item => <NavItem key={item.href} item={item} />)}
           </div>
         </div>
       </nav>
@@ -133,7 +131,7 @@ export function Sidebar({ profile }: { profile: Profile | null }) {
           Settings
         </Link>
 
-        <div className="flex items-center gap-3 px-3 py-2.5 mt-1">
+        <div className="flex items-center gap-3 px-3 py-2.5">
           <div className="w-7 h-7 rounded-lg bg-[#FF8C1A]/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
             {profile?.avatar_url || profile?.company_logo_url ? (
               <img src={profile.avatar_url || profile.company_logo_url} alt="" className="w-full h-full object-cover" />
